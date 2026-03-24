@@ -1,15 +1,12 @@
-
-Copier
-
 import { useState, useEffect, useRef, useCallback } from "react";
- 
+
 // ── BRAND ──────────────────────────────────────────────────────────────────
 const B = {
   blue: "#003B8E", orange: "#E8550A", dark: "#0A0F1E",
   surface: "#111827", card: "#1A2235", border: "#1E2D45",
   text: "#E2E8F0", muted: "#64748B",
 };
- 
+
 // ── DOSSIER TYPES ──────────────────────────────────────────────────────────
 const DOSSIER_TYPES = {
   PRET_IMMO: {
@@ -54,7 +51,7 @@ const DOSSIER_TYPES = {
     ]
   },
 };
- 
+
 // ── TOKEN SYSTEM ───────────────────────────────────────────────────────────
 // Encode dossier info into a URL-safe base64 token
 function generateToken(dossier) {
@@ -67,7 +64,7 @@ function generateToken(dossier) {
   };
   return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
 }
- 
+
 function decodeToken(token) {
   try {
     const payload = JSON.parse(decodeURIComponent(escape(atob(token))));
@@ -77,11 +74,11 @@ function decodeToken(token) {
     return null;
   }
 }
- 
+
 function getClientUrl(token) {
   return `${window.location.origin}/#/client/${token}`;
 }
- 
+
 // ── ROUTING (hash-based, no dependency needed) ─────────────────────────────
 function useHashRoute() {
   const [route, setRoute] = useState(window.location.hash || "#/");
@@ -92,16 +89,16 @@ function useHashRoute() {
   }, []);
   return route;
 }
- 
+
 // ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = (dossierType, prenom, pieces) =>
   `Tu es l'assistant IA d'AXECIME, cabinet de courtage indépendant basé en Guadeloupe. Tu t'appelles "Alex".
- 
+
 MISSION : Collecter les pièces justificatives pour le dossier ${DOSSIER_TYPES[dossierType].label} de ${prenom}.
- 
+
 PIÈCES À COLLECTER :
 ${pieces.map((p, i) => `${i + 1}. [${p.code}] ${p.label} — Statut: ${p.status}`).join("\n")}
- 
+
 RÈGLES :
 - Chaleureux, professionnel, français naturel (contexte guadeloupéen)
 - Demande UNE seule pièce à la fois
@@ -110,18 +107,18 @@ RÈGLES :
 - Rappelle la progression régulièrement
 - Ne jamais redemander une pièce déjà fournie
 - Mentionne que les documents sont stockés de façon sécurisée
- 
+
 PIÈCES REÇUES : ${pieces.filter(p => p.status !== "MANQUANT").map(p => p.label).join(", ") || "Aucune"}
 PIÈCES MANQUANTES : ${pieces.filter(p => p.status === "MANQUANT").map(p => p.label).join(", ")}
- 
+
 FORMAT : Texte conversationnel, max 3 phrases, pas de listes à puces.
 Quand tout est complet : félicite et dis que le conseiller contacte sous 24-48h.`;
- 
+
 // ── HELPERS ────────────────────────────────────────────────────────────────
 const genId = () => Math.random().toString(36).substr(2, 9);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nowTime = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
- 
+
 async function callAgent(messages, systemPrompt) {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -132,7 +129,7 @@ async function callAgent(messages, systemPrompt) {
   if (data.error) throw new Error(data.error);
   return data.text;
 }
- 
+
 // ── COMPOSANTS UI ──────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = {
@@ -149,7 +146,7 @@ function StatusBadge({ status }) {
     </span>
   );
 }
- 
+
 function ProgressRing({ value, size = 56 }) {
   const r = (size - 8) / 2, circ = 2 * Math.PI * r, offset = circ - (value / 100) * circ;
   const color = value === 100 ? "#34D399" : value > 60 ? "#60A5FA" : B.orange;
@@ -165,7 +162,7 @@ function ProgressRing({ value, size = 56 }) {
     </svg>
   );
 }
- 
+
 function Typing() {
   return (
     <div style={{ display: "flex", gap: 4, alignItems: "center", padding: "10px 14px" }}>
@@ -175,7 +172,7 @@ function Typing() {
     </div>
   );
 }
- 
+
 function Bubble({ msg }) {
   const agent = msg.role === "agent";
   return (
@@ -203,7 +200,7 @@ function Bubble({ msg }) {
     </div>
   );
 }
- 
+
 // ── VUE CHAT (partagée dashboard démo + client externe) ────────────────────
 function ChatView({ dossier, onPieceReceived }) {
   const [messages, setMessages] = useState([]);
@@ -214,11 +211,11 @@ function ChatView({ dossier, onPieceReceived }) {
   const bottomRef = useRef(null);
   const fileRef = useRef(null);
   const inited = useRef(false);
- 
+
   const addMsg = useCallback((role, content, file = null) => {
     setMessages(p => [...p, { id: genId(), role, content, file, time: nowTime() }]);
   }, []);
- 
+
   const sendToAgent = useCallback(async (userContent, fileInfo = null, hist = null) => {
     setTyping(true); setLoading(true);
     try {
@@ -241,7 +238,7 @@ function ChatView({ dossier, onPieceReceived }) {
       setTyping(false); setLoading(false);
     }
   }, [history, dossier, addMsg, onPieceReceived]);
- 
+
   useEffect(() => {
     if (inited.current) return;
     inited.current = true;
@@ -260,16 +257,16 @@ function ChatView({ dossier, onPieceReceived }) {
       ]);
     })();
   }, []);
- 
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
- 
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const txt = input.trim(); setInput("");
     addMsg("client", txt);
     await sendToAgent(txt);
   };
- 
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -278,9 +275,9 @@ function ChatView({ dossier, onPieceReceived }) {
     await sendToAgent("", fi);
     e.target.value = "";
   };
- 
+
   const pct = Math.round((dossier.pieces.filter(p => p.status !== "MANQUANT").length / dossier.pieces.length) * 100);
- 
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Header */}
@@ -295,7 +292,7 @@ function ChatView({ dossier, onPieceReceived }) {
         </div>
         <ProgressRing value={pct} />
       </div>
- 
+
       {/* Banner type dossier */}
       <div style={{ background: `linear-gradient(90deg,${B.blue}18,${B.orange}18)`, borderBottom: `1px solid ${B.border}`, padding: "7px 16px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <span>{DOSSIER_TYPES[dossier.type].icon}</span>
@@ -303,7 +300,7 @@ function ChatView({ dossier, onPieceReceived }) {
         <span style={{ color: B.text, fontSize: 13, fontWeight: 600 }}>{DOSSIER_TYPES[dossier.type].label}</span>
         <span style={{ marginLeft: "auto", color: B.muted, fontSize: 12 }}>{dossier.pieces.filter(p => p.status !== "MANQUANT").length}/{dossier.pieces.length} pièces</span>
       </div>
- 
+
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: 16, background: `radial-gradient(ellipse at top left,${B.blue}08 0%,transparent 60%),${B.dark}` }}>
         {messages.length === 0 && (
@@ -321,7 +318,7 @@ function ChatView({ dossier, onPieceReceived }) {
         )}
         <div ref={bottomRef} />
       </div>
- 
+
       {/* Input */}
       <div style={{ background: B.surface, borderTop: `1px solid ${B.border}`, padding: "12px 16px", flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -338,11 +335,11 @@ function ChatView({ dossier, onPieceReceived }) {
     </div>
   );
 }
- 
+
 // ── PAGE CLIENT (accès via lien unique) ────────────────────────────────────
 function ClientPage({ token }) {
   const payload = decodeToken(token);
- 
+
   if (!payload) {
     return (
       <div style={{ height: "100vh", background: B.dark, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, padding: 24 }}>
@@ -358,7 +355,7 @@ function ClientPage({ token }) {
       </div>
     );
   }
- 
+
   // Reconstruire le dossier depuis le token
   const dossier = {
     id: payload.id,
@@ -367,20 +364,20 @@ function ClientPage({ token }) {
     type: payload.type,
     pieces: DOSSIER_TYPES[payload.type].pieces.map(p => ({ ...p, status: "MANQUANT" })),
   };
- 
+
   return (
     <div style={{ height: "100vh", background: B.dark }}>
       <ChatView dossier={dossier} />
     </div>
   );
 }
- 
+
 // ── DASHBOARD ──────────────────────────────────────────────────────────────
 function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
   const [sel, setSel] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [copied, setCopied] = useState(null);
- 
+
   const select = d => { setSel(d.id); onSelectDossier(d); };
   const filtered = dossiers.filter(d => filter === "ALL" || d.statut === filter);
   const stats = {
@@ -390,7 +387,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
     enCours: dossiers.filter(d => d.statut === "EN_COURS").length,
   };
   const statColor = { EN_COURS: "#60A5FA", INCOMPLET: "#FF6B6B", COMPLET: "#34D399" };
- 
+
   const copyLink = (d) => {
     const url = getClientUrl(d.token);
     navigator.clipboard.writeText(url).then(() => {
@@ -398,7 +395,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
       setTimeout(() => setCopied(null), 2000);
     });
   };
- 
+
   return (
     <div style={{ display: "flex", height: "100%" }}>
       {/* Sidebar */}
@@ -414,7 +411,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
             ))}
           </div>
         </div>
- 
+
         <div style={{ padding: "8px 12px", borderBottom: `1px solid ${B.border}`, display: "flex", gap: 5, flexWrap: "wrap" }}>
           {["ALL", "EN_COURS", "INCOMPLET", "COMPLET"].map(s => (
             <button key={s} onClick={() => setFilter(s)} style={{ background: filter === s ? B.blue : B.card, border: `1px solid ${filter === s ? B.blue : B.border}`, color: filter === s ? "#fff" : B.muted, borderRadius: 20, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
@@ -422,7 +419,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
             </button>
           ))}
         </div>
- 
+
         <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {filtered.map(d => {
             const pct = Math.round((d.pieces.filter(p => p.status !== "MANQUANT").length / d.pieces.length) * 100);
@@ -447,7 +444,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
           })}
         </div>
       </div>
- 
+
       {/* Panneau détail */}
       <div style={{ flex: 1, overflowY: "auto", background: B.dark }}>
         {sel ? (() => {
@@ -455,7 +452,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
           if (!d) return null;
           const pct = Math.round((d.pieces.filter(p => p.status !== "MANQUANT").length / d.pieces.length) * 100);
           const clientUrl = getClientUrl(d.token);
- 
+
           return (
             <div style={{ padding: 24 }}>
               {/* Header dossier */}
@@ -475,7 +472,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
                   <div style={{ color: B.muted, fontSize: 11 }}>Complétion</div>
                 </div>
               </div>
- 
+
               {/* 🔗 LIEN CLIENT — la fonctionnalité clé */}
               <div style={{ background: `${B.blue}18`, border: `1px solid ${B.blue}55`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
                 <div style={{ color: "#60A5FA", fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
@@ -500,7 +497,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
                 </div>
                 <div style={{ color: B.muted, fontSize: 11, marginTop: 8 }}>⏳ Lien valable 30 jours · Accès sécurisé au chat uniquement</div>
               </div>
- 
+
               {/* Pièces */}
               <div style={{ color: B.text, fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Pièces justificatives</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
@@ -522,7 +519,7 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
                   </div>
                 ))}
               </div>
- 
+
               {/* Actions */}
               <div style={{ background: B.surface, borderRadius: 16, padding: 16, border: `1px solid ${B.border}` }}>
                 <div style={{ color: B.text, fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Actions rapides</div>
@@ -545,14 +542,14 @@ function Dashboard({ dossiers, onSelectDossier, onValidate, onRefuse }) {
     </div>
   );
 }
- 
+
 // ── APP PRINCIPALE ─────────────────────────────────────────────────────────
 const INIT = [
   { id: "dos-001", prenom: "Jean", nom: "Dupont", email: "j.dupont@email.com", tel: "+596690123456", type: "PRET_IMMO", statut: "INCOMPLET", conseiller: "Marie L.", pieces: DOSSIER_TYPES.PRET_IMMO.pieces.map((p, i) => ({ ...p, status: i < 3 ? "VALIDE" : i === 3 ? "RECU" : "MANQUANT" })) },
   { id: "dos-002", prenom: "Nadège", nom: "Martin", email: "n.martin@email.com", tel: "+596690987654", type: "ASSUR_PRET", statut: "EN_COURS", conseiller: "Pierre T.", pieces: DOSSIER_TYPES.ASSUR_PRET.pieces.map((p, i) => ({ ...p, status: i === 0 ? "VALIDE" : "MANQUANT" })) },
   { id: "dos-003", prenom: "Christophe", nom: "Beaumont", email: "c.beaumont@email.com", tel: "+596690554433", type: "DEFISC", statut: "COMPLET", conseiller: "Sophie A.", pieces: DOSSIER_TYPES.DEFISC.pieces.map(p => ({ ...p, status: "VALIDE" })) },
 ].map(d => ({ ...d, token: generateToken(d) })); // Générer les tokens au démarrage
- 
+
 export default function App() {
   const route = useHashRoute();
   const [view, setView] = useState("dashboard");
@@ -560,13 +557,13 @@ export default function App() {
   const [active, setActive] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", type: "PRET_IMMO", conseiller: "" });
- 
+
   // Routing : si l'URL contient #/client/TOKEN → afficher la page client
   const clientMatch = route.match(/#\/client\/(.+)/);
   if (clientMatch) {
     return <ClientPage token={clientMatch[1]} />;
   }
- 
+
   const updatePiece = (dossierId, pieceCode, newStatus) => {
     const up = arr => arr.map(d => {
       if (d.id !== dossierId) return d;
@@ -578,7 +575,7 @@ export default function App() {
     setDossiers(up);
     if (active) setActive(prev => up([prev])[0]);
   };
- 
+
   const createDossier = () => {
     if (!form.prenom || !form.nom) return;
     const newD = {
@@ -594,7 +591,7 @@ export default function App() {
     setShowNew(false);
     setForm({ prenom: "", nom: "", email: "", tel: "", type: "PRET_IMMO", conseiller: "" });
   };
- 
+
   return (
     <div style={{ height: "100vh", background: B.dark, display: "flex", flexDirection: "column" }}>
       {/* Nav */}
@@ -611,7 +608,7 @@ export default function App() {
           <button onClick={() => setShowNew(true)} style={{ background: `linear-gradient(135deg,${B.blue},#0052CC)`, border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Nouveau dossier</button>
         </div>
       </div>
- 
+
       {/* Contenu */}
       <div style={{ flex: 1, overflow: "hidden" }}>
         {view === "dashboard" ? (
@@ -636,7 +633,7 @@ export default function App() {
           </div>
         )}
       </div>
- 
+
       {/* Modal nouveau dossier */}
       {showNew && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowNew(false)}>
