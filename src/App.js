@@ -78,14 +78,17 @@ function useHashRoute(){
 }
 
 // ── API ────────────────────────────────────────────────────────────────────
+async function readApiError(res){
+  try{const d=await res.json();return d.error||("HTTP "+res.status);}catch{return "HTTP "+res.status;}
+}
 async function apiGetDossiers(){
   const res=await fetch("/api/dossiers");
-  if(!res.ok)throw new Error("Erreur chargement");
+  if(!res.ok)throw new Error(await readApiError(res));
   return res.json();
 }
 async function apiCreateDossier(dossier){
   const res=await fetch("/api/dossiers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(dossier)});
-  if(!res.ok)throw new Error("Erreur création");
+  if(!res.ok)throw new Error(await readApiError(res));
   return res.json();
 }
 async function apiUpdatePiece(id,pieceCode,newStatus){
@@ -771,15 +774,16 @@ export default function App(){
   const [loadingData,setLoadingData]=useState(false);
   const [showNew,setShowNew]=useState(false);
   const [savingNew,setSavingNew]=useState(false);
+  const [apiError,setApiError]=useState(null);
 
   const clientMatch=route.match(/#\/client\/(.+)/);
   if(clientMatch)return <ClientPage token={clientMatch[1]}/>;
   if(!auth)return <LoginPage onLogin={()=>setAuth(true)}/>;
 
   const loadDossiers=useCallback(async()=>{
-    setLoadingData(true);
+    setLoadingData(true);setApiError(null);
     try{const data=await apiGetDossiers();setDossiers(data);}
-    catch(e){console.error("Erreur chargement:",e);}
+    catch(e){console.error("Erreur chargement:",e);setApiError("Chargement des dossiers : "+e.message);}
     finally{setLoadingData(false);}
   },[]);
 
@@ -789,11 +793,11 @@ export default function App(){
     try{
       const updated=await apiUpdatePiece(dossierId,pieceCode,newStatus);
       setDossiers(prev=>prev.map(d=>d.id===dossierId?updated:d));
-    }catch(e){console.error("Erreur mise à jour:",e);}
+    }catch(e){console.error("Erreur mise à jour:",e);setApiError("Mise à jour pièce : "+e.message);}
   };
 
   const handleCreate=async(form)=>{
-    setSavingNew(true);
+    setSavingNew(true);setApiError(null);
     try{
       const newD={id:"dos-"+genId(),...form,statut:"EN_COURS",
         pieces:DOSSIER_TYPES[form.type].pieces.map(p=>({...p,status:"MANQUANT"}))};
@@ -801,7 +805,11 @@ export default function App(){
       const saved=await apiCreateDossier(newD);
       setDossiers(prev=>[saved,...prev]);
       setShowNew(false);
-    }catch(e){console.error("Erreur création:",e);}
+    }catch(e){
+      console.error("Erreur création:",e);
+      setApiError("Création dossier : "+e.message);
+      window.alert("Impossible de créer le dossier :\n\n"+e.message+"\n\nVérifie /api/health pour diagnostiquer.");
+    }
     finally{setSavingNew(false);}
   };
 
@@ -822,6 +830,14 @@ export default function App(){
 
   return <>
     <GlobalCSS/>
+    {apiError&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:2000,background:"#3F1A1A",borderBottom:"1px solid #FF6B6B",color:"#FF6B6B",padding:"10px 16px",fontSize:13,display:"flex",alignItems:"center",gap:12}}>
+      <span style={{fontSize:18}}>⚠️</span>
+      <div style={{flex:1}}>
+        <strong>Erreur API :</strong> {apiError}
+        <a href="/api/health" target="_blank" rel="noreferrer" style={{color:"#60A5FA",marginLeft:12,textDecoration:"underline"}}>Diagnostic /api/health</a>
+      </div>
+      <button onClick={()=>setApiError(null)} style={{background:"transparent",border:"none",color:"#FF6B6B",fontSize:18,cursor:"pointer"}}>×</button>
+    </div>}
     <Dashboard dossiers={dossiers} loading={loadingData}
       onValidate={handleValidate}
       onNewDossier={()=>setShowNew(true)}
