@@ -225,14 +225,21 @@ function Bubble({msg}){
   </div>;
 }
 
-// FIX #1 — Saisie date de naissance avec 3 selects (Jour / Mois / Année)
+// Saisie date de naissance avec 3 selects (Jour / Mois / Année)
+// On garde l'état partiel en interne pour permettre la saisie progressive
 function DobInput({value, onChange}){
-  const parts = value ? value.split("-") : ["","",""];
-  const year = parts[0]||"", month = parts[1]||"", day = parts[2]||"";
+  const [parts,setParts]=useState(()=>{
+    if(value){
+      const p=value.split("-");
+      if(p.length===3) return {y:p[0],m:p[1],d:p[2]};
+    }
+    return {y:"",m:"",d:""};
+  });
 
-  const update=(y,m,d)=>{
-    if(y&&m&&d) onChange(y+"-"+m+"-"+d);
-    else onChange("");
+  const setPart=(k,v)=>{
+    const next={...parts,[k]:v};
+    setParts(next);
+    onChange(next.y&&next.m&&next.d ? next.y+"-"+next.m+"-"+next.d : "");
   };
 
   const days=Array.from({length:31},(_,i)=>String(i+1).padStart(2,"0"));
@@ -247,15 +254,15 @@ function DobInput({value, onChange}){
   const sel={background:B.card,border:"1px solid "+B.border,borderRadius:10,padding:"10px 8px",color:B.text,fontSize:14,flex:1,cursor:"pointer"};
 
   return <div style={{display:"flex",gap:8}}>
-    <select value={day} onChange={e=>update(year,month,e.target.value)} style={sel}>
+    <select value={parts.d} onChange={e=>setPart("d",e.target.value)} style={sel}>
       <option value="">Jour</option>
       {days.map(d=><option key={d} value={d}>{d}</option>)}
     </select>
-    <select value={month} onChange={e=>update(year,e.target.value,day)} style={{...sel,flex:2}}>
+    <select value={parts.m} onChange={e=>setPart("m",e.target.value)} style={{...sel,flex:2}}>
       <option value="">Mois</option>
       {months.map(m=><option key={m.v} value={m.v}>{m.l}</option>)}
     </select>
-    <select value={year} onChange={e=>update(e.target.value,month,day)} style={{...sel,flex:2}}>
+    <select value={parts.y} onChange={e=>setPart("y",e.target.value)} style={{...sel,flex:2}}>
       <option value="">Année</option>
       {years.map(y=><option key={y} value={y}>{y}</option>)}
     </select>
