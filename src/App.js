@@ -776,10 +776,6 @@ export default function App(){
   const [savingNew,setSavingNew]=useState(false);
   const [apiError,setApiError]=useState(null);
 
-  const clientMatch=route.match(/#\/client\/(.+)/);
-  if(clientMatch)return <ClientPage token={clientMatch[1]}/>;
-  if(!auth)return <LoginPage onLogin={()=>setAuth(true)}/>;
-
   const loadDossiers=useCallback(async()=>{
     setLoadingData(true);setApiError(null);
     try{const data=await apiGetDossiers();setDossiers(data);}
@@ -787,7 +783,16 @@ export default function App(){
     finally{setLoadingData(false);}
   },[]);
 
-  useEffect(()=>{loadDossiers();},[loadDossiers]);
+  const clientMatch=route.match(/#\/client\/(.+)/);
+  const isClient=!!clientMatch;
+
+  // Tous les hooks AVANT les early returns (Rules of Hooks)
+  useEffect(()=>{
+    if(!isClient&&auth)loadDossiers();
+  },[isClient,auth,loadDossiers]);
+
+  if(clientMatch)return <ClientPage token={clientMatch[1]}/>;
+  if(!auth)return <LoginPage onLogin={()=>setAuth(true)}/>;
 
   const handleValidate=async(dossierId,pieceCode,newStatus)=>{
     try{
