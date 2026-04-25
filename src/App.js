@@ -104,8 +104,8 @@ async function apiResetDemo(){
   return res.json();
 }
 
-// FIX #3 — Upload SharePoint avec nom+prenom+type dans le body
-async function apiUploadToSharePoint(file,dossier,pieceCode){
+// Upload vers Vercel Blob via /api/upload (rétention 30 jours)
+async function apiUploadFile(file,dossier,pieceCode){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onload=async(e)=>{
@@ -116,9 +116,6 @@ async function apiUploadToSharePoint(file,dossier,pieceCode){
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
             dossierId:dossier.id,
-            prenom:dossier.prenom,
-            nom:dossier.nom,
-            typeDossier:DOSSIER_TYPES[dossier.type]?.label||dossier.type,
             pieceCode,
             fileName:file.name,
             fileBase64:base64,
@@ -140,7 +137,7 @@ function buildPrompt(type,prenom,pieces){
   return "Tu es l'assistant IA d'AXECIME, cabinet de courtage indépendant basé en Guadeloupe. Tu t'appelles Alex.\n"+
     "MISSION : Collecter les pièces pour le dossier "+DOSSIER_TYPES[type].label+" de "+prenom+".\n"+
     "PIÈCES : "+pieces.map((p,i)=>(i+1)+". ["+p.code+"] "+p.label+" — "+p.status).join(" | ")+"\n"+
-    "RÈGLES : Chaleureux, français naturel guadeloupéen. UNE pièce à la fois. Max 2 emojis. Rappelle la progression. Mentionne la sécurité SharePoint.\n"+
+    "RÈGLES : Chaleureux, français naturel guadeloupéen. UNE pièce à la fois. Max 2 emojis. Rappelle la progression. Mentionne que les documents sont stockés en sécurité (rétention 30 jours).\n"+
     "REÇUES : "+(pieces.filter(p=>p.status!=="MANQUANT").map(p=>p.label).join(", ")||"Aucune")+"\n"+
     "MANQUANTES : "+pieces.filter(p=>p.status==="MANQUANT").map(p=>p.label).join(", ")+"\n"+
     "FORMAT : Max 3 phrases. Quand tout complet : félicite + conseiller sous 24-48h.";
@@ -212,8 +209,8 @@ function Bubble({msg}){
           <div style={{color:B.text,fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{msg.file.name}</div>
           <div style={{color:B.muted,fontSize:11,display:"flex",alignItems:"center",gap:6}}>
             {(msg.file.size/1024).toFixed(1)} KB
-            {msg.uploadStatus==="uploading"&&<span style={{color:"#60A5FA"}}>⏳ Envoi vers SharePoint...</span>}
-            {msg.uploadStatus==="success"&&<span style={{color:"#34D399"}}>✅ Enregistré dans SharePoint</span>}
+            {msg.uploadStatus==="uploading"&&<span style={{color:"#60A5FA"}}>⏳ Envoi en cours...</span>}
+            {msg.uploadStatus==="success"&&<span style={{color:"#34D399"}}>✅ Document enregistré</span>}
             {msg.uploadStatus==="error"&&<span style={{color:"#FF6B6B"}}>❌ Erreur upload</span>}
           </div>
         </div>
@@ -339,7 +336,7 @@ function ChatView({dossier,onPieceReceived}){
     setTyping(true);setLoading(true);
     try{
       const h=hist||history;
-      const msgContent=fileInfo?"[FICHIER REÇU: "+fileInfo.name+" — Enregistré dans SharePoint] "+(userContent||"Voici le document demandé."):userContent;
+      const msgContent=fileInfo?"[FICHIER REÇU: "+fileInfo.name+" — Document enregistré] "+(userContent||"Voici le document demandé."):userContent;
       const updated=[...h,{role:"user",content:msgContent}];
       await sleep(600+Math.random()*400);
       const reply=await callAgent(updated,buildPrompt(dossier.type,dossier.prenom,dossier.pieces));
@@ -378,18 +375,11 @@ function ChatView({dossier,onPieceReceived}){
     const msgId=addMsg("client","",fi,"uploading");
     let uploadOk=false;
     try{
-      await apiUploadToSharePoint(file,dossier,pending?.code||"DOC");
+      // /api/upload enregistre dans Vercel Blob ET met à jour le statut "RECU" en Redis
+      await apiUploadFile(file,dossier,pending?.code||"DOC");
       updateUploadStatus(msgId,"success");
       uploadOk=true;
-      // FIX Bug #2 — persister le statut "RECU" en Redis et mettre à jour l'UI client
-      if(pending){
-        try{
-          await apiUpdatePiece(dossier.id,pending.code,"RECU");
-          onPieceReceived&&onPieceReceived(pending.code);
-        }catch(err){
-          console.error("Erreur sync statut pièce:",err);
-        }
-      }
+      if(pending)onPieceReceived&&onPieceReceived(pending.code);
     }catch(e){
       console.error("Upload error:",e);
       updateUploadStatus(msgId,"error");
@@ -441,7 +431,7 @@ function ChatView({dossier,onPieceReceived}){
         <button onClick={doSend} disabled={!input.trim()||loading}
           style={{width:42,height:42,borderRadius:"50%",background:input.trim()&&!loading?"linear-gradient(135deg,"+B.blue+",#0052CC)":B.border,border:"none",cursor:input.trim()&&!loading?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:"#fff",flexShrink:0}}>➤</button>
       </div>
-      <div style={{textAlign:"center",color:B.muted,fontSize:11,marginTop:8}}>🔒 Documents sauvegardés dans SharePoint AXECIME · Conforme RGPD</div>
+      <div style={{textAlign:"center",color:B.muted,fontSize:11,marginTop:8}}>🔒 Documents sauvegardés en sécurité · Rétention 30 jours · Conforme RGPD</div>
     </div>
   </div>;
 }
@@ -611,9 +601,8 @@ function Dashboard({dossiers,loading,onValidate,onNewDossier,onLogout,onRefresh,
                   <span style={{background:B.blue+"33",color:"#60A5FA",padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:600}}>{DOSSIER_TYPES[d.type]?.icon} {DOSSIER_TYPES[d.type]?.label}</span>
                   {d.conseiller&&<span style={{color:B.muted,fontSize:12}}>👤 {d.conseiller}</span>}
                 </div>
-                {/* FIX #3 — Affichage du chemin SharePoint */}
                 <div style={{marginTop:6,color:B.muted,fontSize:11,fontFamily:"'Space Mono',monospace"}}>
-                  📁 {(d.nom||"").toUpperCase().replace(/\s+/g,"_")+"_"+(d.prenom||"").toUpperCase().replace(/\s+/g,"_")+"_"+(DOSSIER_TYPES[d.type]?.label||"").toUpperCase().replace(/\s+/g,"_")}
+                  📁 dossiers/{d.id}
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
@@ -622,9 +611,13 @@ function Dashboard({dossiers,loading,onValidate,onNewDossier,onLogout,onRefresh,
               </div>
             </div>
 
-            <div style={{background:"#1A2F3F22",border:"1px solid "+B.blue+"44",borderRadius:10,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
-              <span>📁</span>
-              <div style={{color:"#60A5FA",fontSize:12}}><strong>Stockage SharePoint actif</strong> — Dossier : Dossiers-Clients/{(d.nom||"").toUpperCase().replace(/\s+/g,"_")}_{(d.prenom||"").toUpperCase().replace(/\s+/g,"_")}_{(DOSSIER_TYPES[d.type]?.label||"").toUpperCase().replace(/\s+/g,"_")}</div>
+            <div style={{background:"#1A2F3F22",border:"1px solid "+B.blue+"44",borderRadius:10,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span>📦</span>
+              <div style={{color:"#60A5FA",fontSize:12,flex:1,minWidth:200}}><strong>Stockage interne</strong> — Rétention automatique : 30 jours après upload</div>
+              <a href={"/api/dossier-zip?id="+d.id} download
+                style={{background:"linear-gradient(135deg,"+B.blue+",#0052CC)",color:"#fff",borderRadius:8,padding:"6px 12px",fontSize:12,textDecoration:"none",fontWeight:700,whiteSpace:"nowrap"}}>
+                📥 Télécharger ZIP
+              </a>
             </div>
 
             <div style={{background:B.blue+"15",border:"1px solid "+B.blue+"44",borderRadius:14,padding:16,marginBottom:16}}>
@@ -646,7 +639,7 @@ function Dashboard({dossiers,loading,onValidate,onNewDossier,onLogout,onRefresh,
                   📧 Email
                 </a>}
               </div>
-              <div style={{color:B.muted,fontSize:11,marginTop:8}}>⏳ 30 jours · 🔐 Protégé par date de naissance · 📁 SharePoint</div>
+              <div style={{color:B.muted,fontSize:11,marginTop:8}}>⏳ Lien valable 30 jours · 🔐 Protégé par date de naissance · 📦 Stockage interne</div>
             </div>
 
             <div style={{color:B.text,fontWeight:700,fontSize:15,marginBottom:10}}>Pièces justificatives</div>
@@ -656,9 +649,17 @@ function Dashboard({dossiers,loading,onValidate,onNewDossier,onLogout,onRefresh,
                   <div>
                     <div style={{color:B.text,fontSize:14,fontWeight:600}}>{p.label}</div>
                     <div style={{color:B.muted,fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:2}}>{p.code} · {p.type}</div>
+                    {p.file&&p.file.url&&<div style={{color:B.muted,fontSize:11,marginTop:4}}>
+                      📄 {p.file.name} · {(p.file.size/1024).toFixed(1)} KB
+                      {p.file.uploadedAt&&<span style={{marginLeft:6}}>· reçu le {new Date(p.file.uploadedAt).toLocaleDateString("fr-FR")}</span>}
+                    </div>}
                   </div>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     <StatusBadge status={p.status}/>
+                    {p.file&&p.file.url&&<a href={p.file.url} target="_blank" rel="noreferrer" download
+                      style={{background:B.blue+"22",border:"1px solid "+B.blue+"55",color:"#60A5FA",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                      📥 Voir
+                    </a>}
                     {p.status==="RECU"&&<>
                       <button onClick={()=>handlePiece(d.id,p.code,"VALIDE")} disabled={saving===p.code}
                         style={{background:"#1A3F2F",border:"1px solid #34D399",color:"#34D399",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer",fontWeight:700,opacity:saving===p.code?0.6:1}}>
@@ -740,15 +741,8 @@ function NewDossierModal({onClose,onCreate,saving}){
         </select>
       </div>
 
-      {form.nom&&form.prenom&&form.type&&<div style={{background:B.card,border:"1px solid "+B.border,borderRadius:10,padding:"8px 12px",marginBottom:12}}>
-        <div style={{color:B.muted,fontSize:11}}>📁 Dossier SharePoint :</div>
-        <div style={{color:B.text,fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:2}}>
-          Dossiers-Clients/{form.nom.toUpperCase().replace(/\s+/g,"_")}_{form.prenom.toUpperCase().replace(/\s+/g,"_")}_{(DOSSIER_TYPES[form.type]?.label||"").toUpperCase().replace(/\s+/g,"_")}
-        </div>
-      </div>}
-
       <div style={{background:B.blue+"18",border:"1px solid "+B.blue+"44",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
-        <div style={{color:"#60A5FA",fontSize:12}}>🔐 Date de naissance = vérification client · 📁 Fichiers → SharePoint automatiquement</div>
+        <div style={{color:"#60A5FA",fontSize:12}}>🔐 Date de naissance = vérification client · 📦 Stockage interne · ⏳ Rétention 30 jours</div>
       </div>
 
       <div style={{display:"flex",gap:8}}>
