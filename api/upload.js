@@ -37,10 +37,12 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Paramètres manquants : dossierId, fileName, fileBase64 requis" });
     }
 
+    const { category } = req.body;
     const ext = fileName.split(".").pop().toLowerCase();
     const safeFileName = (pieceCode ? pieceCode + "_" : "") +
       slugify(fileName.replace(/\.[^.]+$/, "")) + "." + ext;
-    const blobPath = "dossiers/" + dossierId + "/" + Date.now() + "_" + safeFileName;
+    const catSlug = category ? slugify(category) + "/" : "";
+    const blobPath = "dossiers/" + dossierId + "/" + catSlug + Date.now() + "_" + safeFileName;
 
     const fileBuffer = Buffer.from(fileBase64, "base64");
 

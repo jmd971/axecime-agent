@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const B = {
   blue:"#003B8E", orange:"#E8550A", dark:"#0A0F1E",
@@ -10,37 +10,69 @@ const CONSEILLER_PASSWORD = "axecime2025";
 
 const DOSSIER_TYPES = {
   PRET_IMMO:{label:"Prêt Immobilier",icon:"🏠",pieces:[
-    {code:"CNI",label:"Carte d'identité (recto-verso)",type:"IDENTITE"},
-    {code:"JUSTIF_DOM",label:"Justificatif de domicile < 3 mois",type:"DOMICILE"},
-    {code:"BULL_SAL_1",label:"Bulletin de salaire M-1",type:"REVENUS"},
-    {code:"BULL_SAL_2",label:"Bulletin de salaire M-2",type:"REVENUS"},
-    {code:"BULL_SAL_3",label:"Bulletin de salaire M-3",type:"REVENUS"},
-    {code:"AVIS_IMPOS",label:"Avis d'imposition N-1",type:"REVENUS"},
-    {code:"RELEVE_BANCAIRE",label:"3 derniers relevés bancaires",type:"REVENUS"},
-    {code:"COMPROMIS",label:"Compromis de vente signé",type:"BIEN"},
+    {code:"CNI",label:"Carte d'identité (recto-verso)",type:"IDENTITE",category:"01-Identité"},
+    {code:"JUSTIF_DOM",label:"Justificatif de domicile < 3 mois",type:"DOMICILE",category:"02-Domicile"},
+    {code:"BULL_SAL_1",label:"Bulletin de salaire M-1",type:"REVENUS",category:"03-Revenus"},
+    {code:"BULL_SAL_2",label:"Bulletin de salaire M-2",type:"REVENUS",category:"03-Revenus"},
+    {code:"BULL_SAL_3",label:"Bulletin de salaire M-3",type:"REVENUS",category:"03-Revenus"},
+    {code:"AVIS_IMPOS_N1",label:"Avis d'imposition N-1",type:"REVENUS",category:"03-Revenus"},
+    {code:"AVIS_IMPOS_N2",label:"Avis d'imposition N-2",type:"REVENUS",category:"03-Revenus"},
+    {code:"REL_BANC_1",label:"Relevé bancaire M-1",type:"BANQUE",category:"04-Banques"},
+    {code:"REL_BANC_2",label:"Relevé bancaire M-2",type:"BANQUE",category:"04-Banques"},
+    {code:"REL_BANC_3",label:"Relevé bancaire M-3",type:"BANQUE",category:"04-Banques"},
+    {code:"TABLEAU_AMORT",label:"Tableau d'amortissement crédit(s) en cours",type:"CREDIT",category:"05-Crédits"},
+    {code:"BAIL",label:"Bail signé (si propriétaire bailleur)",type:"LOCATIF",category:"06-Locatif"},
+    {code:"QUITTANCES",label:"3 dernières quittances de loyer reçu",type:"LOCATIF",category:"06-Locatif"},
+    {code:"COMPROMIS",label:"Compromis de vente signé",type:"BIEN",category:"07-Projet"},
+    {code:"DIVERS",label:"Document complémentaire (si nécessaire)",type:"DIVERS",category:"08-Divers"},
   ]},
   ASSUR_PRET:{label:"Assurance de Prêt",icon:"🛡️",pieces:[
-    {code:"CNI",label:"Carte d'identité",type:"IDENTITE"},
-    {code:"QUESTIONNAIRE_SANTE",label:"Questionnaire de santé complété",type:"SANTE"},
-    {code:"OFFRE_PRET",label:"Offre de prêt bancaire",type:"FINANCEMENT"},
-    {code:"TABLEAU_AMORT",label:"Tableau d'amortissement",type:"FINANCEMENT"},
-    {code:"CERTIFICAT_EMPLOI",label:"Certificat d'emploi",type:"REVENUS"},
+    {code:"CNI",label:"Carte d'identité (recto-verso)",type:"IDENTITE",category:"01-Identité"},
+    {code:"OFFRE_PRET",label:"Offre de prêt bancaire",type:"FINANCEMENT",category:"02-Financement"},
+    {code:"TABLEAU_AMORT",label:"Tableau d'amortissement",type:"FINANCEMENT",category:"02-Financement"},
+    {code:"CERTIFICAT_EMPLOI",label:"Certificat d'emploi",type:"REVENUS",category:"03-Revenus"},
+    {code:"BULL_SAL_1",label:"Bulletin de salaire M-1",type:"REVENUS",category:"03-Revenus"},
+    {code:"QUESTIONNAIRE_SANTE",label:"Questionnaire de santé complété",type:"SANTE",category:"04-Santé"},
   ]},
   DEFISC:{label:"Défiscalisation Pinel OM",icon:"📊",pieces:[
-    {code:"CNI",label:"Carte d'identité",type:"IDENTITE"},
-    {code:"AVIS_IMPOS",label:"Avis d'imposition 2 dernières années",type:"REVENUS"},
-    {code:"ACTE_VENTE",label:"Acte de vente ou VEFA signé",type:"BIEN"},
-    {code:"PLAN_FINANCEMENT",label:"Plan de financement détaillé",type:"FINANCEMENT"},
-    {code:"RIB",label:"Relevé d'Identité Bancaire",type:"FINANCEMENT"},
+    {code:"CNI",label:"Carte d'identité (recto-verso)",type:"IDENTITE",category:"01-Identité"},
+    {code:"AVIS_IMPOS_N1",label:"Avis d'imposition N-1",type:"REVENUS",category:"02-Revenus"},
+    {code:"AVIS_IMPOS_N2",label:"Avis d'imposition N-2",type:"REVENUS",category:"02-Revenus"},
+    {code:"ACTE_VENTE",label:"Acte de vente ou VEFA signé",type:"BIEN",category:"03-Bien"},
+    {code:"RIB",label:"Relevé d'Identité Bancaire",type:"FINANCEMENT",category:"04-Financement"},
+    {code:"PLAN_FINANCEMENT",label:"Plan de financement détaillé",type:"FINANCEMENT",category:"04-Financement"},
   ]},
   RACHAT_CREDIT:{label:"Rachat de Crédit",icon:"🔄",pieces:[
-    {code:"CNI",label:"Carte d'identité",type:"IDENTITE"},
-    {code:"JUSTIF_DOM",label:"Justificatif de domicile",type:"DOMICILE"},
-    {code:"TABLEAUX_AMORT",label:"Tableaux d'amortissement en cours",type:"FINANCEMENT"},
-    {code:"BULL_SAL_1",label:"Bulletin de salaire M-1",type:"REVENUS"},
-    {code:"BULL_SAL_2",label:"Bulletin de salaire M-2",type:"REVENUS"},
-    {code:"AVIS_IMPOS",label:"Avis d'imposition N-1",type:"REVENUS"},
-    {code:"RELEVE_BANCAIRE",label:"3 derniers relevés bancaires",type:"REVENUS"},
+    {code:"CNI",label:"Carte d'identité (recto-verso)",type:"IDENTITE",category:"01-Identité"},
+    {code:"JUSTIF_DOM",label:"Justificatif de domicile < 3 mois",type:"DOMICILE",category:"02-Domicile"},
+    {code:"BULL_SAL_1",label:"Bulletin de salaire M-1",type:"REVENUS",category:"03-Revenus"},
+    {code:"BULL_SAL_2",label:"Bulletin de salaire M-2",type:"REVENUS",category:"03-Revenus"},
+    {code:"BULL_SAL_3",label:"Bulletin de salaire M-3",type:"REVENUS",category:"03-Revenus"},
+    {code:"AVIS_IMPOS_N1",label:"Avis d'imposition N-1",type:"REVENUS",category:"03-Revenus"},
+    {code:"REL_BANC_1",label:"Relevé bancaire M-1",type:"BANQUE",category:"04-Banques"},
+    {code:"REL_BANC_2",label:"Relevé bancaire M-2",type:"BANQUE",category:"04-Banques"},
+    {code:"REL_BANC_3",label:"Relevé bancaire M-3",type:"BANQUE",category:"04-Banques"},
+    {code:"TABLEAU_AMORT_1",label:"Tableau d'amortissement crédit 1",type:"CREDIT",category:"05-Crédits à racheter"},
+    {code:"TABLEAU_AMORT_2",label:"Tableau d'amortissement crédit 2 (si applicable)",type:"CREDIT",category:"05-Crédits à racheter"},
+    {code:"TABLEAU_AMORT_3",label:"Tableau d'amortissement crédit 3 (si applicable)",type:"CREDIT",category:"05-Crédits à racheter"},
+  ]},
+  DOMMAGE_OUVRAGE:{label:"Dommage Ouvrage",icon:"🏗️",pieces:[
+    {code:"CNI_MO",label:"Carte d'identité du maître d'ouvrage",type:"IDENTITE",category:"01-Identité"},
+    {code:"JUSTIF_DOM",label:"Justificatif de domicile < 3 mois",type:"DOMICILE",category:"01-Identité"},
+    {code:"TITRE_PROPRIO",label:"Titre de propriété ou acte d'acquisition du terrain",type:"ADMINISTRATIF",category:"02-Documents administratifs"},
+    {code:"PERMIS_CONSTRUIRE",label:"Permis de construire ou déclaration préalable",type:"ADMINISTRATIF",category:"02-Documents administratifs"},
+    {code:"QUESTIONNAIRE_DO",label:"Questionnaire de déclaration du risque (rempli)",type:"ADMINISTRATIF",category:"02-Documents administratifs"},
+    {code:"PLAN_MASSE",label:"Plan de masse du terrain",type:"TECHNIQUE",category:"03-Documents techniques"},
+    {code:"PLAN_FONDATIONS",label:"Plans de fondations",type:"TECHNIQUE",category:"03-Documents techniques"},
+    {code:"PLANS_NIVEAUX",label:"Plans des niveaux et façades",type:"TECHNIQUE",category:"03-Documents techniques"},
+    {code:"DESCRIPTIF_TRAVAUX",label:"Descriptif technique des travaux",type:"TECHNIQUE",category:"03-Documents techniques"},
+    {code:"ESTIMATION_COUT",label:"Estimation du coût total de l'opération (TTC)",type:"TECHNIQUE",category:"03-Documents techniques"},
+    {code:"CONTRAT_CCMI",label:"CCMI ou contrat de maîtrise d'œuvre",type:"CONTRACTUEL",category:"04-Documents contractuels"},
+    {code:"DEVIS_ENTREPRISES",label:"Devis de chaque corps d'état",type:"CONTRACTUEL",category:"04-Documents contractuels"},
+    {code:"ATTESTATION_RCD",label:"Attestations RCD des entreprises",type:"CONTRACTUEL",category:"04-Documents contractuels"},
+    {code:"ASSURANCE_DECEN",label:"Attestations assurance décennale des entrepreneurs",type:"CONTRACTUEL",category:"04-Documents contractuels"},
+    {code:"GFL",label:"Garantie financière de livraison (GFL)",type:"CONTRACTUEL",category:"04-Documents contractuels"},
+    {code:"RIB",label:"Relevé d'Identité Bancaire",type:"FINANCEMENT",category:"05-Financement"},
   ]},
 };
 
@@ -114,12 +146,14 @@ async function apiUploadFile(file,dossier,pieceCode){
     reader.onload=async(e)=>{
       try{
         const base64=e.target.result.split(",")[1];
+        const piece=(dossier.pieces||[]).find(p=>p.code===pieceCode);
         const res=await fetch("/api/upload",{
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
             dossierId:dossier.id,
             pieceCode,
+            category:piece?.category||"",
             fileName:file.name,
             fileBase64:base64,
             mimeType:file.type,
@@ -135,28 +169,8 @@ async function apiUploadFile(file,dossier,pieceCode){
   });
 }
 
-// ── PROMPT ────────────────────────────────────────────────────────────────
-function buildPrompt(type,prenom,pieces){
-  return "Tu es l'assistant IA d'AXECIME, cabinet de courtage indépendant basé en Guadeloupe. Tu t'appelles Alex.\n"+
-    "MISSION : Collecter les pièces pour le dossier "+DOSSIER_TYPES[type].label+" de "+prenom+".\n"+
-    "PIÈCES : "+pieces.map((p,i)=>(i+1)+". ["+p.code+"] "+p.label+" — "+p.status).join(" | ")+"\n"+
-    "RÈGLES : Chaleureux, français naturel guadeloupéen. UNE pièce à la fois. Max 2 emojis. Rappelle la progression. Mentionne que les documents sont stockés en sécurité (rétention 30 jours).\n"+
-    "REÇUES : "+(pieces.filter(p=>p.status!=="MANQUANT").map(p=>p.label).join(", ")||"Aucune")+"\n"+
-    "MANQUANTES : "+pieces.filter(p=>p.status==="MANQUANT").map(p=>p.label).join(", ")+"\n"+
-    "FORMAT : Max 3 phrases. Quand tout complet : félicite + conseiller sous 24-48h.";
-}
-
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const genId=()=>Math.random().toString(36).substr(2,9);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const nowTime=()=>new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
-
-async function callAgent(messages,system){
-  const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages,system})});
-  const data=await res.json();
-  if(data.error)throw new Error(data.error);
-  return data.text;
-}
 
 // ── CSS ───────────────────────────────────────────────────────────────────
 function GlobalCSS(){
@@ -195,38 +209,6 @@ function ProgressRing({value,size=56}){
   </svg>;
 }
 
-function Typing(){
-  return <div style={{display:"flex",gap:4,alignItems:"center",padding:"10px 14px"}}>
-    {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:B.muted,animation:"wave 1.2s ease-in-out infinite",animationDelay:(i*0.15)+"s"}}/>)}
-  </div>;
-}
-
-function Bubble({msg}){
-  const agent=msg.role==="agent";
-  return <div style={{display:"flex",justifyContent:agent?"flex-start":"flex-end",marginBottom:8,animation:"fadeUp 0.3s ease"}}>
-    {agent&&<div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,"+B.blue+","+B.orange+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,marginRight:8,flexShrink:0,alignSelf:"flex-end"}}>🤖</div>}
-    <div style={{maxWidth:"75%"}}>
-      {msg.file&&<div style={{background:agent?B.card:B.blue,borderRadius:agent?"18px 18px 18px 4px":"18px 18px 4px 18px",padding:"10px 14px",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>
-        <span style={{fontSize:22}}>{msg.file.type&&msg.file.type.includes("pdf")?"📄":"🖼️"}</span>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{color:B.text,fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{msg.file.name}</div>
-          <div style={{color:B.muted,fontSize:11,display:"flex",alignItems:"center",gap:6}}>
-            {(msg.file.size/1024).toFixed(1)} KB
-            {msg.uploadStatus==="uploading"&&<span style={{color:"#60A5FA"}}>⏳ Envoi en cours...</span>}
-            {msg.uploadStatus==="success"&&<span style={{color:"#34D399"}}>✅ Document enregistré</span>}
-            {msg.uploadStatus==="error"&&<span style={{color:"#FF6B6B"}}>❌ Erreur upload</span>}
-          </div>
-        </div>
-      </div>}
-      {msg.content&&<div style={{background:agent?B.card:"linear-gradient(135deg,"+B.blue+",#0052CC)",color:B.text,padding:"10px 14px",borderRadius:agent?"18px 18px 18px 4px":"18px 18px 4px 18px",fontSize:14,lineHeight:1.65}}>
-        {msg.content}
-      </div>}
-      <div style={{fontSize:11,color:B.muted,marginTop:3,textAlign:agent?"left":"right",paddingLeft:agent?4:0}}>
-        {msg.time}{!agent&&<span style={{marginLeft:4,color:"#60A5FA"}}>✓✓</span>}
-      </div>
-    </div>
-  </div>;
-}
 
 // Saisie date de naissance avec 3 selects (Jour / Mois / Année)
 // On garde l'état partiel en interne pour permettre la saisie progressive
@@ -321,127 +303,115 @@ function DobVerification({prenom,dobHash,onVerified}){
   </div>;
 }
 
-// ── CHAT VIEW ─────────────────────────────────────────────────────────────
-function ChatView({dossier,onPieceReceived}){
-  const [messages,setMessages]=useState([]);
-  const [input,setInput]=useState("");
-  const [typing,setTyping]=useState(false);
-  const [loading,setLoading]=useState(false);
-  const [history,setHistory]=useState([]);
-  const bottomRef=useRef(null);
-  const fileRef=useRef(null);
-  const inited=useRef(false);
+// ── CHECKLIST VIEW ────────────────────────────────────────────────────────
+function ChecklistView({dossier}){
+  const [pieces,setPieces]=useState(dossier.pieces);
+  const [uploading,setUploading]=useState({});
+  const [errors,setErrors]=useState({});
+  const fileRefs=useRef({});
 
-  const addMsg=useCallback((role,content,file=null,uploadStatus=null)=>{
-    const id=genId();
-    setMessages(p=>[...p,{id,role,content,file,uploadStatus,time:nowTime()}]);
-    return id;
-  },[]);
+  const received=pieces.filter(p=>p.status!=="MANQUANT").length;
+  const pct=Math.round(received/pieces.length*100);
 
-  const updateUploadStatus=useCallback((msgId,status)=>{
-    setMessages(p=>p.map(m=>m.id===msgId?{...m,uploadStatus:status}:m));
-  },[]);
-
-  const sendToAgent=useCallback(async(userContent,fileInfo=null,hist=null)=>{
-    setTyping(true);setLoading(true);
+  const handleFile=async(file,piece)=>{
+    setUploading(u=>({...u,[piece.code]:true}));
+    setErrors(e=>({...e,[piece.code]:null}));
     try{
-      const h=hist||history;
-      const msgContent=fileInfo?"[FICHIER REÇU: "+fileInfo.name+" — Document enregistré] "+(userContent||"Voici le document demandé."):userContent;
-      const updated=[...h,{role:"user",content:msgContent}];
-      await sleep(600+Math.random()*400);
-      const reply=await callAgent(updated,buildPrompt(dossier.type,dossier.prenom,dossier.pieces));
-      setHistory([...updated,{role:"assistant",content:reply}]);
-      addMsg("agent",reply);
+      await apiUploadFile(file,{...dossier,pieces},piece.code);
+      setPieces(prev=>prev.map(p=>p.code===piece.code
+        ?{...p,status:"RECU",file:{name:file.name,size:file.size,uploadedAt:new Date().toISOString()}}
+        :p
+      ));
     }catch(e){
-      console.error("Chat error:",e);
-      addMsg("agent","Désolé, une erreur est survenue. Réessayez dans un instant 🙏");
+      setErrors(err=>({...err,[piece.code]:e.message}));
     }
-    finally{setTyping(false);setLoading(false);}
-  },[history,dossier,addMsg,onPieceReceived]);
-
-  useEffect(()=>{
-    if(inited.current)return;
-    inited.current=true;
-    (async()=>{
-      setTyping(true);await sleep(800);
-      const greeting=await callAgent(
-        [{role:"user",content:"Bonjour, je suis "+dossier.prenom+" "+dossier.nom+"."}],
-        buildPrompt(dossier.type,dossier.prenom,dossier.pieces)
-      ).catch(()=>"Bonjour "+dossier.prenom+" ! 👋 Je suis Alex, l'assistant AXECIME. Commençons votre dossier — pouvez-vous m'envoyer une photo de votre carte d'identité recto-verso ?");
-      setTyping(false);
-      addMsg("agent",greeting);
-      setHistory([{role:"user",content:"Bonjour, je suis "+dossier.prenom+" "+dossier.nom+"."},{role:"assistant",content:greeting}]);
-    })();
-  },[]);
-
-  useEffect(()=>{bottomRef.current&&bottomRef.current.scrollIntoView({behavior:"smooth"});},[messages,typing]);
-
-  const pct=Math.round((dossier.pieces.filter(p=>p.status!=="MANQUANT").length/dossier.pieces.length)*100);
-  const doSend=()=>{if(!input.trim()||loading)return;const t=input.trim();setInput("");addMsg("client",t);sendToAgent(t);};
-
-  const handleFile=async(file)=>{
-    const fi={name:file.name,type:file.type,size:file.size};
-    const pending=dossier.pieces.find(p=>p.status==="MANQUANT");
-    const msgId=addMsg("client","",fi,"uploading");
-    let uploadOk=false;
-    try{
-      // /api/upload enregistre dans Vercel Blob ET met à jour le statut "RECU" en Redis
-      await apiUploadFile(file,dossier,pending?.code||"DOC");
-      updateUploadStatus(msgId,"success");
-      uploadOk=true;
-      if(pending)onPieceReceived&&onPieceReceived(pending.code);
-    }catch(e){
-      console.error("Upload error:",e);
-      updateUploadStatus(msgId,"error");
-    }
-    await sendToAgent("",{...fi,uploaded:uploadOk});
+    setUploading(u=>({...u,[piece.code]:false}));
   };
 
-  return <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+  const bycat=pieces.reduce((acc,p)=>{const c=p.category||"Autres";if(!acc[c])acc[c]=[];acc[c].push(p);return acc;},{});
+
+  return <div style={{minHeight:"100vh",background:B.dark,display:"flex",flexDirection:"column"}}>
+    {/* Header */}
     <div style={{background:B.surface,borderBottom:"1px solid "+B.border,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-      <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,"+B.blue+","+B.orange+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🤖</div>
-      <div style={{flex:1}}>
-        <div style={{color:B.text,fontWeight:700,fontSize:15}}>Alex — AXECIME</div>
-        <div style={{color:"#34D399",fontSize:12,display:"flex",alignItems:"center",gap:4}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:"#34D399"}}/>En ligne · Assistant certifié
+      <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,"+B.blue+","+B.orange+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>⚡</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{color:B.text,fontWeight:700,fontSize:15}}>AXECIME</div>
+        <div style={{color:B.muted,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          {DOSSIER_TYPES[dossier.type].icon} {DOSSIER_TYPES[dossier.type].label} — {dossier.prenom} {dossier.nom}
         </div>
       </div>
       <ProgressRing value={pct}/>
     </div>
-    <div style={{background:"linear-gradient(90deg,"+B.blue+"18,"+B.orange+"18)",borderBottom:"1px solid "+B.border,padding:"7px 16px",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-      <span>{DOSSIER_TYPES[dossier.type].icon}</span>
-      <span style={{color:B.muted,fontSize:12}}>Dossier :</span>
-      <span style={{color:B.text,fontSize:13,fontWeight:600}}>{DOSSIER_TYPES[dossier.type].label}</span>
-      <span style={{marginLeft:"auto",color:B.muted,fontSize:12}}>{dossier.pieces.filter(p=>p.status!=="MANQUANT").length}/{dossier.pieces.length} pièces</span>
-    </div>
-    <div style={{flex:1,overflowY:"auto",padding:16,background:"radial-gradient(ellipse at top left,"+B.blue+"08 0%,transparent 60%),"+B.dark}}>
-      {messages.length===0&&<div style={{textAlign:"center",color:B.muted,fontSize:13,marginTop:48}}>
-        <div style={{fontSize:44,marginBottom:12,animation:"pulse 1.5s ease infinite"}}>🤖</div>
-        Connexion à l'assistant en cours...
-      </div>}
-      {messages.map(m=><Bubble key={m.id} msg={m}/>)}
-      {typing&&<div style={{display:"flex",alignItems:"flex-end",gap:8}}>
-        <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,"+B.blue+","+B.orange+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🤖</div>
-        <div style={{background:B.card,borderRadius:"18px 18px 18px 4px"}}><Typing/></div>
-      </div>}
-      <div ref={bottomRef}/>
-    </div>
-    <div style={{background:B.surface,borderTop:"1px solid "+B.border,padding:"12px 16px",flexShrink:0}}>
-      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        <button onClick={()=>fileRef.current&&fileRef.current.click()} disabled={loading}
-          style={{width:42,height:42,borderRadius:"50%",border:"1px solid "+B.border,background:loading?B.border:B.card,cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>📎</button>
-        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}} onChange={e=>{
-          const file=e.target.files&&e.target.files[0];if(!file)return;
-          handleFile(file);e.target.value="";
-        }}/>
-        <input value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&doSend()}
-          placeholder="Écrivez un message..." disabled={loading}
-          style={{flex:1,background:B.card,border:"1px solid "+B.border,borderRadius:22,padding:"10px 16px",color:B.text,fontSize:14}}/>
-        <button onClick={doSend} disabled={!input.trim()||loading}
-          style={{width:42,height:42,borderRadius:"50%",background:input.trim()&&!loading?"linear-gradient(135deg,"+B.blue+",#0052CC)":B.border,border:"none",cursor:input.trim()&&!loading?"pointer":"not-allowed",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:"#fff",flexShrink:0}}>➤</button>
+
+    {/* Barre de progression */}
+    <div style={{background:B.surface,padding:"10px 16px",borderBottom:"1px solid "+B.border}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+        <span style={{color:B.muted,fontSize:12}}>{received} / {pieces.length} documents reçus</span>
+        <span style={{color:pct===100?"#34D399":B.orange,fontSize:12,fontWeight:700}}>{pct}%</span>
       </div>
-      <div style={{textAlign:"center",color:B.muted,fontSize:11,marginTop:8}}>🔒 Documents sauvegardés en sécurité · Rétention 30 jours · Conforme RGPD</div>
+      <div style={{background:B.border,borderRadius:4,height:5,overflow:"hidden"}}>
+        <div style={{width:pct+"%",height:"100%",background:pct===100?"#34D399":B.orange,transition:"width 0.5s",borderRadius:4}}/>
+      </div>
+    </div>
+
+    {/* Bannière succès */}
+    {pct===100&&<div style={{background:"#1A3F2F",border:"1px solid #34D39966",margin:"16px 16px 0",borderRadius:14,padding:20,textAlign:"center"}}>
+      <div style={{fontSize:36,marginBottom:8}}>🎉</div>
+      <div style={{color:"#34D399",fontWeight:700,fontSize:16,marginBottom:4}}>Dossier complet !</div>
+      <div style={{color:B.muted,fontSize:13}}>Merci {dossier.prenom}. Votre conseiller AXECIME vous contactera sous 24-48h.</div>
+    </div>}
+
+    {/* Catégories */}
+    <div style={{flex:1,overflowY:"auto",padding:16}}>
+      {Object.entries(bycat).map(([cat,catPieces])=>{
+        const catDone=catPieces.filter(p=>p.status!=="MANQUANT").length;
+        return <div key={cat} style={{marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,paddingBottom:6,borderBottom:"1px solid "+B.border}}>
+            <span style={{fontSize:14}}>📁</span>
+            <span style={{color:"#60A5FA",fontWeight:700,fontSize:13}}>{cat}</span>
+            <span style={{color:catDone===catPieces.length?"#34D399":B.muted,fontSize:11,fontWeight:600}}>
+              {catDone}/{catPieces.length}
+            </span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {catPieces.map(p=>{
+              const done=p.status!=="MANQUANT";
+              return <div key={p.code} style={{background:B.surface,borderRadius:10,padding:"11px 14px",border:"1px solid "+(done?"#34D39933":B.border),display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:B.text,fontSize:13,fontWeight:600}}>{p.label}</div>
+                  {p.file&&p.file.name&&<div style={{color:B.muted,fontSize:11,marginTop:3,display:"flex",alignItems:"center",gap:5}}>
+                    <span>📄</span>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>{p.file.name}</span>
+                    {p.file.size&&<span>· {(p.file.size/1024).toFixed(0)} KB</span>}
+                  </div>}
+                  {errors[p.code]&&<div style={{color:"#FF6B6B",fontSize:11,marginTop:3}}>❌ {errors[p.code]}</div>}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <StatusBadge status={p.status}/>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{display:"none"}}
+                    ref={el=>{fileRefs.current[p.code]=el;}}
+                    onChange={e=>{const f=e.target.files&&e.target.files[0];if(!f)return;handleFile(f,p);e.target.value="";}}
+                  />
+                  <button
+                    onClick={()=>fileRefs.current[p.code]&&fileRefs.current[p.code].click()}
+                    disabled={!!uploading[p.code]}
+                    style={{background:uploading[p.code]?B.border:done?"#1A3F2F":"linear-gradient(135deg,"+B.blue+",#0052CC)",
+                      border:done?"1px solid #34D39955":"none",
+                      color:uploading[p.code]?B.muted:done?"#34D399":"#fff",
+                      borderRadius:8,padding:"6px 12px",fontSize:12,cursor:uploading[p.code]?"not-allowed":"pointer",fontWeight:700,whiteSpace:"nowrap"
+                    }}>
+                    {uploading[p.code]?"⏳ Envoi...":done?"↩ Remplacer":"📎 Envoyer"}
+                  </button>
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>;
+      })}
+    </div>
+
+    <div style={{background:B.surface,borderTop:"1px solid "+B.border,padding:"10px 16px",textAlign:"center",flexShrink:0}}>
+      <div style={{color:B.muted,fontSize:11}}>🔒 Documents sauvegardés en sécurité · Rétention 30 jours · Conforme RGPD</div>
     </div>
   </div>;
 }
@@ -453,6 +423,18 @@ function ClientPage({token}){
   const [pieces,setPieces]=useState(()=>
     payload?DOSSIER_TYPES[payload.type].pieces.map(p=>({...p,status:"MANQUANT"})):[]
   );
+  const [loadingPieces,setLoadingPieces]=useState(false);
+
+  useEffect(()=>{
+    if(!verified||!payload)return;
+    setLoadingPieces(true);
+    fetch("/api/dossier?id="+encodeURIComponent(payload.id))
+      .then(r=>r.ok?r.json():null)
+      .then(data=>{if(data&&data.pieces)setPieces(data.pieces);})
+      .catch(()=>{})
+      .finally(()=>setLoadingPieces(false));
+  },[verified]);
+
   if(!payload)return <div style={{height:"100vh",background:B.dark,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}>
     <GlobalCSS/>
     <div style={{fontSize:56}}>⛔</div>
@@ -462,16 +444,16 @@ function ClientPage({token}){
       <div style={{color:B.text,fontSize:14,fontWeight:600}}>axecime.com</div>
     </div>
   </div>;
+
   const dossier={id:payload.id,prenom:payload.prenom,nom:payload.nom,type:payload.type,pieces};
-  // FIX Bug #2 — quand une pièce est reçue côté chat, on met à jour la UI client
-  const handlePieceReceived=(pieceCode)=>{
-    setPieces(prev=>prev.map(p=>p.code===pieceCode?{...p,status:"RECU"}:p));
-  };
-  return <div style={{height:"100vh",background:B.dark}}>
+
+  return <div style={{background:B.dark}}>
     <GlobalCSS/>
     {!verified
       ?<DobVerification prenom={payload.prenom} dobHash={payload.dobHash} onVerified={()=>setVerified(true)}/>
-      :<ChatView dossier={dossier} onPieceReceived={handlePieceReceived}/>}
+      :loadingPieces
+        ?<div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:B.muted,fontSize:14}}>Chargement...</div>
+        :<ChecklistView dossier={dossier}/>}
   </div>;
 }
 
@@ -653,37 +635,49 @@ function Dashboard({dossiers,loading,onValidate,onNewDossier,onLogout,onRefresh,
             </div>
 
             <div style={{color:B.text,fontWeight:700,fontSize:15,marginBottom:10}}>Pièces justificatives</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
-              {d.pieces.map(p=>(
-                <div key={p.code} style={{background:B.surface,borderRadius:10,padding:"12px 14px",border:"1px solid "+B.border,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-                  <div>
-                    <div style={{color:B.text,fontSize:14,fontWeight:600}}>{p.label}</div>
-                    <div style={{color:B.muted,fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:2}}>{p.code} · {p.type}</div>
-                    {p.file&&p.file.url&&<div style={{color:B.muted,fontSize:11,marginTop:4}}>
-                      📄 {p.file.name} · {(p.file.size/1024).toFixed(1)} KB
-                      {p.file.uploadedAt&&<span style={{marginLeft:6}}>· reçu le {new Date(p.file.uploadedAt).toLocaleDateString("fr-FR")}</span>}
-                    </div>}
+            {(()=>{
+              const bycat=d.pieces.reduce((acc,p)=>{const c=p.category||"Autres";if(!acc[c])acc[c]=[];acc[c].push(p);return acc;},{});
+              return Object.entries(bycat).map(([cat,catPieces])=>(
+                <div key={cat} style={{marginBottom:16}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,paddingBottom:6,borderBottom:"1px solid "+B.border}}>
+                    <span style={{fontSize:13}}>📁</span>
+                    <span style={{color:"#60A5FA",fontSize:12,fontWeight:700,letterSpacing:0.5}}>{cat}</span>
+                    <span style={{color:B.muted,fontSize:11}}>({catPieces.filter(p=>p.status!=="MANQUANT").length}/{catPieces.length} reçues)</span>
                   </div>
-                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    <StatusBadge status={p.status}/>
-                    {p.file&&p.file.url&&<a href={p.file.url} target="_blank" rel="noreferrer" download
-                      style={{background:B.blue+"22",border:"1px solid "+B.blue+"55",color:"#60A5FA",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,textDecoration:"none"}}>
-                      📥 Voir
-                    </a>}
-                    {p.status==="RECU"&&<>
-                      <button onClick={()=>handlePiece(d.id,p.code,"VALIDE")} disabled={saving===p.code}
-                        style={{background:"#1A3F2F",border:"1px solid #34D399",color:"#34D399",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer",fontWeight:700,opacity:saving===p.code?0.6:1}}>
-                        {saving===p.code?"...":"✓ Valider"}
-                      </button>
-                      <button onClick={()=>handlePiece(d.id,p.code,"REFUSE")} disabled={saving===p.code}
-                        style={{background:"#3F1A1A",border:"1px solid #FF6B6B",color:"#FF6B6B",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer",fontWeight:700,opacity:saving===p.code?0.6:1}}>
-                        {saving===p.code?"...":"✕ Refuser"}
-                      </button>
-                    </>}
+                  <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:4}}>
+                    {catPieces.map(p=>(
+                      <div key={p.code} style={{background:B.surface,borderRadius:10,padding:"10px 14px",border:"1px solid "+B.border,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginLeft:18}}>
+                        <div>
+                          <div style={{color:B.text,fontSize:13,fontWeight:600}}>{p.label}</div>
+                          <div style={{color:B.muted,fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:2}}>{p.code}</div>
+                          {p.file&&p.file.url&&<div style={{color:B.muted,fontSize:11,marginTop:4}}>
+                            📄 {p.file.name} · {(p.file.size/1024).toFixed(1)} KB
+                            {p.file.uploadedAt&&<span style={{marginLeft:6}}>· reçu le {new Date(p.file.uploadedAt).toLocaleDateString("fr-FR")}</span>}
+                          </div>}
+                        </div>
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                          <StatusBadge status={p.status}/>
+                          {p.file&&p.file.url&&<a href={p.file.url} target="_blank" rel="noreferrer" download
+                            style={{background:B.blue+"22",border:"1px solid "+B.blue+"55",color:"#60A5FA",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                            📥 Voir
+                          </a>}
+                          {p.status==="RECU"&&<>
+                            <button onClick={()=>handlePiece(d.id,p.code,"VALIDE")} disabled={saving===p.code}
+                              style={{background:"#1A3F2F",border:"1px solid #34D399",color:"#34D399",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer",fontWeight:700,opacity:saving===p.code?0.6:1}}>
+                              {saving===p.code?"...":"✓ Valider"}
+                            </button>
+                            <button onClick={()=>handlePiece(d.id,p.code,"REFUSE")} disabled={saving===p.code}
+                              style={{background:"#3F1A1A",border:"1px solid #FF6B6B",color:"#FF6B6B",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer",fontWeight:700,opacity:saving===p.code?0.6:1}}>
+                              {saving===p.code?"...":"✕ Refuser"}
+                            </button>
+                          </>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              ));
+            })()}
 
             <div style={{background:B.surface,borderRadius:14,padding:14,border:"1px solid "+B.border}}>
               <div style={{color:B.text,fontWeight:600,fontSize:13,marginBottom:10}}>Actions rapides</div>

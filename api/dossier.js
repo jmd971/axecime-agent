@@ -10,9 +10,25 @@ async function getClient() {
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  if (req.method === "GET") {
+    const id = req.query && req.query.id;
+    if (!id) return res.status(400).json({ error: "Paramètre id manquant" });
+    let client;
+    try {
+      client = await getClient();
+      const raw = await client.get("dossier:" + id);
+      await client.quit();
+      if (!raw) return res.status(404).json({ error: "Dossier introuvable" });
+      return res.status(200).json(JSON.parse(raw));
+    } catch (err) {
+      if (client) try { await client.quit(); } catch (e) {}
+      return res.status(500).json({ error: err.message });
+    }
+  }
 
   if (req.method === "DELETE") {
     const id = (req.query && req.query.id) || (req.body && req.body.id);
